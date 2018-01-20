@@ -1,12 +1,17 @@
 module.exports = {
   parser: 'babel-eslint',
-  extends: ['@strv/javascript', 'prettier', 'prettier/react'],
+  extends: [
+    '@strv/javascript/environments/react/v16',
+    '@strv/javascript/environments/react/optional',
+    '@strv/javascript/coding-styles/recommended',
+    'prettier',
+    'prettier/react',
+  ],
   env: {
     browser: true,
     node: true,
     jest: true,
   },
-  plugins: [],
   parserOptions: {
     sourceType: 'module',
     ecmaFeatures: {
