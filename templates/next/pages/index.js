@@ -1,3 +1,10 @@
 import React from 'react'
 
-export default () => <div>Hello, world!</div>
+import Head from '../components/head'
+
+export default () => (
+  <div>
+    <Head />
+    Hello, world!
+  </div>
+)
