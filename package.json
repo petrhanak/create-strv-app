@@ -11,12 +11,8 @@
     "strv"
   ],
   "engines": {
-    "node": ">=4"
+    "node": ">=7.6.0"
   },
-  "files": [
-    "/bin",
-    "/lib"
-  ],
   "bin": {
     "create-strv-app": "./bin/create-strv-app.js"
   },
