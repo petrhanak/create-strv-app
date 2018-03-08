@@ -1,105 +1,95 @@
 #!/usr/bin/env node
 'use strict'
 
+const args = require('args')
 const path = require('path')
 const fs = require('fs-extra')
 const execa = require('execa')
 const ora = require('ora')
+const { prompt } = require('inquirer')
 const ms = require('ms')
 const chalk = require('chalk')
+const updateNotifier = require('update-notifier')
+const pkgJson = require('../lib/pkg-json')
+const log = require('../lib/log')
+const { hasYarn } = require('../lib/utils')
+const pkg = require('../package.json')
 
-const args = process.argv.slice(2)
+updateNotifier({ pkg }).notify()
 
-const P_NAME = 'proj'
+args
+  .option('npm', 'Use npm to install dependencies', false)
+  .example(
+    'create-strv-app default my-awesome-app',
+    'Create app based on default template'
+  )
+  .example('create-strv-app list', 'List all available templates')
 
-const proj = path.resolve(process.cwd(), P_NAME)
-fs.removeSync(proj)
-
-const help = () => `
-  Usage:
-    create-strv-app [template] [project-name]
-`
-
-const hasYarn = () => {
-  try {
-    execa.sync('yarnpkg', '--version')
-    return true
-  } catch (e) {
-    return false
-  }
-}
-
-const useYarn = hasYarn()
-
-const install = async cwd => {
-  const cmd = useYarn ? 'yarn' : 'npm'
-  return await execa(cmd, ['install'], { cwd }).stdout.pipe(process.stdout)
-}
-
-const template = args[0]
-const projectName = args[1]
-
-const templatesPath = path.resolve(__dirname, '../templates')
-const templatePath = path.resolve(templatesPath, template)
-const projectPath = path.resolve(process.cwd(), projectName)
-
-let spinner
+const flags = args.parse(process.argv, {
+  name: 'create-strv-app',
+  value: '<template> <name>',
+})
 
 const main = async () => {
   const start = Date.now()
-  console.log()
-  console.log('🕹  ', `Creating a new app in ${chalk.green(projectPath)}.\n`)
+  let template = args.sub[0] && args.sub[0].toLowerCase()
+  let projectName = args.sub[1]
 
-  await fs.copy(templatePath, projectName)
-  const pkgPath = path.resolve(projectPath, 'package.json')
-  const pkg = JSON.parse(await fs.readFile(pkgPath, 'utf8'))
+  const templatesPath = path.resolve(__dirname, '../templates')
+  const dir = await fs.readdir(templatesPath)
+  const templates = dir.filter(tmp => tmp !== 'dotfiles')
 
-  const dependencies = Object.keys(pkg.dependencies)
-    .map(dep => chalk.red(dep))
-    .sort()
-    .join(' ')
+  if (!template) {
+    const res = await prompt({
+      type: 'list',
+      name: 'template',
+      message: 'Choose a template:',
+      choices: templates,
+    })
 
-  const cmd = useYarn ? 'yarn' : 'npm'
+    template = res.template
+  }
+
+  if (!templates.includes(template)) {
+    log.warn("Template doesn't exist.")
+    return
+  }
+
+  if (!projectName) {
+    const res = await prompt({
+      name: 'projectName',
+      message: 'Enter you project name',
+    })
+
+    projectName = res.projectName
+  }
+
+  const templatePath = path.resolve(templatesPath, template)
+  const dotfilesPath = path.resolve(__dirname, '../templates/dotfiles')
+  const projectPath = path.resolve(process.cwd(), projectName)
+
+  if (fs.existsSync(projectPath)) {
+    log.warn('Project directory already exists.')
+    return
+  }
+
+  let spinner = ora('Creating project in').start()
+
+  await fs.copy(templatePath, projectPath)
+  await fs.copy(dotfilesPath, projectPath)
+  await pkgJson({ projectPath, projectName })
+
+  spinner.succeed(`Project created at ${chalk.blue(projectPath)}`)
+
   spinner = ora({
-    text: ` Installing dependencies using ${cmd}, it can take a while.`,
-    spinner: 'earth'
+    text: 'Installing dependencies, it can take a while.',
+    spinner: 'earth',
   }).start()
-  await execa(cmd, ['install'], { cwd: projectPath })
-  spinner.stopAndPersist({
-    text: `Installed: ${dependencies}\n`,
-    symbol: '🎉  '
-  })
-  console.log('⏱  ', `Done in ${ms(Date.now() - start)}`)
 
-  const { scripts } = pkg
-  const c = useYarn ? 'yarn' : 'npm run'
-  console.log(`${chalk.green('Awesome!')}`, '\n')
-  console.log(
-    '🏃‍️  Change directory:',
-    `\n ${chalk.blue(`cd ${projectName}`)}`,
-    '\n'
-  )
-  console.log(
-    '🤖  Start a local server for development:',
-    `\n ${chalk.blue(`${c} start`)}`,
-    '\n'
-  )
-  console.log(`💡  For more info about project setup visit:`)
-  console.log(
-    `${chalk.green(
-      `https://github.com/prichodko/create-strv-app/tree/master/templates/${template}/readme.md`
-    )}`,
-    '\n'
-  )
-  console.log('❓  Questions? Feedback? Please let me know!')
-  console.log(
-    `${chalk.green('https://github.com/prichodko/create-strv-app/issues')}`,
-    '\n'
-  )
+  const cmd = hasYarn() && !flags.npm ? 'yarn' : 'npm'
+  await execa(cmd, ['install'], { cwd: projectPath })
+
+  spinner.succeed(`Done in ${ms(Date.now() - start)}`)
 }
 
-main().catch(err => {
-  console.warn(err)
-  spinner.fail('Something went wrong')
-  process.exit(1)
-})
+main().catch(err => log.warn(err))
