@@ -1,16 +1,24 @@
 {
   "name": "create-strv-app",
   "description": "Create new app in line with STRV's best practices.",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "author": "Pavel Prichodko <prichodko.p@gmail.com>",
   "bugs": {
     "url": "https://github.com/prichodko/create-strv-app/issues"
   },
-  "keywords": ["create-react-app", "react", "strv"],
+  "keywords": [
+    "create-react-app",
+    "react",
+    "strv"
+  ],
   "engines": {
     "node": ">=4"
   },
-  "files": ["bin", "lib", "templates"],
+  "files": [
+    "bin",
+    "lib",
+    "templates"
+  ],
   "bin": "./bin/create-strv-app.js",
   "repository": "prichodko/create-strv-app",
   "license": "MIT",
@@ -24,8 +32,15 @@
     "trailingComma": "es5"
   },
   "lint-staged": {
-    "*.js": ["eslint --fix", "prettier --write", "git add"],
-    "*.{json,css,md}": ["prettier --write", "git add"]
+    "*.js": [
+      "eslint --fix",
+      "prettier --write",
+      "git add"
+    ],
+    "*.{json,css,md}": [
+      "prettier --write",
+      "git add"
+    ]
   },
   "dependencies": {
     "args": "^3.0.8",
